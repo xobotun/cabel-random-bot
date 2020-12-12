@@ -27,8 +27,15 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import java.text.DecimalFormat
+import java.util.*
+import java.util.Collections.sort
+import java.util.concurrent.ThreadLocalRandom
+import java.util.stream.Collectors
 
 fun main(args: Array<String>) {
+
+    initGrowPlant()
 
     val bot = describeBot()
     bot.startWebhook()
@@ -44,6 +51,12 @@ fun main(args: Array<String>) {
         }
     }
     server.start(wait = true)
+}
+
+fun initGrowPlant() {
+    listOf("Д", "Т", "В", "У", "К", "С", "М").forEach {
+        for (i in 1..ThreadLocalRandom.current().nextInt(2, 6)) createSensor("Т1$it$i")
+    }
 }
 
 fun describeBot() = bot {
@@ -94,8 +107,38 @@ fun describeBot() = bot {
             val chatId = update.message!!.chat.id;
 
             val joinedArgs = args.joinToString()
-            val response = if (joinedArgs.isNotBlank()) "`TODO: Показывает статус датчика`" else "`TODO: Показывает статус теплицы в целом`"
-            bot.sendMessage(chatId = chatId, parseMode = MARKDOWN, text = response)
+            if (joinedArgs.isBlank()) {
+                val plantId = 1L
+                val sensors = getSensors(1)
+                if (sensors == null || sensors.isEmpty()) {
+                    bot.sendMessage(chatId = chatId, text = "В теплице $plantId не установлены датчики! Возможно, последствия вчерашней пылевой бури и потери электроснабжения. Необходима ручная перерегистрация")
+                    return@command
+                }
+
+                val messages = Arrays.stream(SensorType.values())
+                    .map { sensors[it] }
+                    .filter(Objects::nonNull)
+                    .map { it!!.toMutableList() }
+                    .peek { it.sortBy { it.code } }
+                    .map {
+                        """
+                            Тип: ${it[0].sensorType.type}
+                            Датчики: ${it.joinToString(", ") { "`${it.code}`" }}
+                            Среднее значение: `${it.map { it.current() }.average().format(2)}` ${it[0].sensorType.unit}
+                        """.trimIndent()
+                    }
+                    .collect(Collectors.toList())
+
+                bot.sendPlant(chatId, plantId, messages)
+            } else {
+                val sensor = getSensor(joinedArgs)
+                if (sensor == null) {
+                    bot.sendMessage(chatId = chatId, text = "Датчик с таким идентификатором не найден")
+                    return@command
+                } else {
+                    bot.sendSensor(chatId, sensor)
+                }
+            }
         }
 
         command("add") {
@@ -353,9 +396,15 @@ fun Bot.sendSensor(chatId: Long, sensor: FakeSensor) = sendMessage(chatId = chat
     Теплица: `${sensor.plantId}`
     Датчик: `${sensor.plantId}`
     Тип: `${sensor.sensorType.type}`
-    Нижняя граница: `${sensor.lowBoundary()} ${sensor.sensorType.unit}`
-    Верхняя граница: `${sensor.highBoundary()} ${sensor.sensorType.unit}`
-    Текущее значение: `${sensor.current()} ${sensor.sensorType.unit} (норма)`
+    Нижняя граница: `${sensor.lowBoundary().format(2)} ${sensor.sensorType.unit}`
+    Верхняя граница: `${sensor.highBoundary().format(2)} ${sensor.sensorType.unit}`
+    Текущее значение: `${sensor.current().format(2)} ${sensor.sensorType.unit} (норма)`
+""".trimIndent())
+
+fun Bot.sendPlant(chatId: Long, plantId: Long, messages: List<String>) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
+    Теплица: `$plantId`
+    
+${messages.joinToString("\n\n") { it }}
 """.trimIndent())
 
 fun generateUsersButton(): List<List<KeyboardButton>> {
@@ -363,4 +412,11 @@ fun generateUsersButton(): List<List<KeyboardButton>> {
             listOf(KeyboardButton("Request location (not supported on desktop)", requestLocation = true)),
             listOf(KeyboardButton("Request contact", requestContact = true))
     )
+}
+
+
+fun Double.format(fracDigits: Int): String {
+    val df = DecimalFormat()
+    df.maximumFractionDigits = fracDigits
+    return df.format(this)
 }
