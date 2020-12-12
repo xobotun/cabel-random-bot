@@ -1,12 +1,11 @@
 package com.xobotun.rxproject.martianagrobot
 
+import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.*
-import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
-import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN_V2
 import com.github.kotlintelegrambot.entities.ReplyKeyboardRemove
 import com.github.kotlintelegrambot.entities.TelegramFile.ByUrl
@@ -17,12 +16,12 @@ import com.github.kotlintelegrambot.entities.inputmedia.InputMediaPhoto
 import com.github.kotlintelegrambot.entities.inputmedia.MediaGroup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
-import com.github.kotlintelegrambot.extensions.filters.Filter
 import com.github.kotlintelegrambot.logging.LogLevel
-import com.github.kotlintelegrambot.network.fold
 import com.github.kotlintelegrambot.webhook
 import io.ktor.application.*
+import io.ktor.http.*
 import io.ktor.request.*
+import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -36,7 +35,9 @@ fun main(args: Array<String>) {
         routing {
             post("/") {
                 val receivedBody = call.receiveText()
+                println("received: $receivedBody")
                 bot.processUpdate(receivedBody)
+                call.respondText("OK", ContentType.Text.Plain);
             }
         }
     }
@@ -53,49 +54,43 @@ fun describeBot() = bot {
     }
 
     dispatch {
-        message(Filter.Sticker) {
-            bot.sendMessage(message.chat.id, text = "You have received an awesome sticker \\o/")
-        }
-
-        message(Filter.Reply or Filter.Forward) {
-            bot.sendMessage(message.chat.id, text = "someone is replying or forwarding messages ...")
-        }
-
         command("start") {
+            val chatId = update.message!!.chat.id;
 
-            val result = bot.sendMessage(chatId = update.message!!.chat.id, text = "Bot started")
-
-            result.fold({
-                // do something here with the response
-            }, {
-                // do something with the error
-            })
+            bot.sendStart(chatId)
+            bot.sendAbout(chatId)
+            bot.sendMessage(chatId = chatId, text = "Вам наверняка не терпится начать. Вот краткая справка:")
+            bot.sendHelp(chatId)
         }
 
-        command("hello") {
-
-            val result = bot.sendMessage(chatId = update.message!!.chat.id, text = "Hello, world!")
-
-            result.fold({
-                // do something here with the response
-            }, {
-                // do something with the error
-            })
+        command("about") {
+            val chatId = update.message!!.chat.id;
+            bot.sendAbout(chatId)
         }
 
-        command("commandWithArgs") {
+        command("help") {
+            val chatId = update.message!!.chat.id;
+            bot.sendHelp(chatId)
+        }
+
+        command("status") {
+            val chatId = update.message!!.chat.id;
+
             val joinedArgs = args.joinToString()
-            val response = if (joinedArgs.isNotBlank()) joinedArgs else "There is no text apart from command!"
-            bot.sendMessage(chatId = message.chat.id, text = response)
+            val response = if (joinedArgs.isNotBlank()) "`TODO: Показывает статус датчика`" else "`TODO: Показывает статус теплицы в целом`"
+            bot.sendMessage(chatId = chatId, text = response)
         }
 
-        command("markdown") {
-            val markdownText = "_Cool message_: *Markdown* is `beatiful` :P"
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = markdownText,
-                    parseMode = MARKDOWN
-            )
+        command("add") {
+            val chatId = update.message!!.chat.id;
+
+            val joinedArgs = args.joinToString()
+            if (joinedArgs.isBlank()) {
+                bot.sendMessage(chatId = chatId, text = "Укажите идентификатор датчика, находящийся на ближайшей к вам стороне корпуса")
+                return@command
+            }
+
+            bot.sendMessage(chatId = chatId, text = "`TODO: Добавляет датчик или ругается`")
         }
 
         command("markdownV2") {
@@ -233,6 +228,38 @@ fun describeBot() = bot {
         }
     }
 }
+
+fun Bot.sendStart(chatId: Long) = sendMessage(chatId = chatId, text = """
+    Martian database connection established...
+    Reading user profile data...
+    
+    Добро пожаловать в систему уведомлений и мониторинга RxMartianBot!
+""".trimIndent())
+
+fun Bot.sendAbout(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN_V2, text = """
+    Система уведомлений и мониторинга позволяет:
+     • быстро получать уведомления и отчёты на личный коммуникатор колониста (настраивается в личном кабинете в приложении),
+     • запрашивать статус датчиков в теплице и пересылать их другим, оставаясь в экосистеме чата.
+     • санкционировать регистрацию свежеустановленных датчиков в системе мониторинга.
+
+    Это демо-версия приложения. Стоимость полной версии вы можете запросить в марсианском отделе инфоагромаркетинга RxCorporation.
+    
+    ```>> RxMartianBot v0.3.14 <<
+    >> $chatId <<```
+""".trimIndent())
+
+fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN_V2, text = """
+    Список доступных команд:
+     • /about – общая информация о приложении
+     • /help – показывает это сообщение
+     ► /status – показывает статус теплицы [демо-версия ограничена одной теплицей]
+     ► /status `id датчика` – показывает статус датчика
+     ► /add `id датчика` – регистрирует датчик в системе 
+
+    Команды, помеченные "►" так же доступны в виде кнопок. Это удобнее для людей.
+
+    Более полную информацию вы можете получить в марсианском отделе моральной поддержки RxCorporation. 
+""".trimIndent())
 
 fun generateUsersButton(): List<List<KeyboardButton>> {
     return listOf(
