@@ -6,6 +6,7 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.*
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
+import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN_V2
 import com.github.kotlintelegrambot.entities.ReplyKeyboardRemove
@@ -58,10 +59,18 @@ fun describeBot() = bot {
         command("start") {
             val chatId = update.message!!.chat.id;
 
-            bot.sendStart(chatId)
-            bot.sendAbout(chatId)
-            bot.sendMessage(chatId = chatId, text = "Вам наверняка не терпится начать. Вот краткая справка:")
-            bot.sendHelp(chatId)
+            if (userPresent(chatId)) {
+                bot.sendRepeatingStart(chatId);
+            } else {
+                registerUser(chatId)
+
+                bot.playStartAnimation(chatId)
+                Thread.sleep(750);
+                bot.sendAbout(chatId)
+                Thread.sleep(250);
+                bot.sendMessage(chatId = chatId, text = "Вам наверняка не терпится начать. Вот краткая справка:")
+                bot.sendHelp(chatId)
+            }
         }
 
         command("about") {
@@ -72,6 +81,13 @@ fun describeBot() = bot {
         command("help") {
             val chatId = update.message!!.chat.id;
             bot.sendHelp(chatId)
+        }
+
+        command("exit") {
+            val chatId = update.message!!.chat.id;
+
+            deleteUser(chatId)
+            bot.sendExit(chatId)
         }
 
         command("status") {
@@ -231,11 +247,55 @@ fun describeBot() = bot {
     }
 }
 
-fun Bot.sendStart(chatId: Long) = sendMessage(chatId = chatId, text = """
-    Martian database connection established...
-    Reading user profile data...
-    
-    Добро пожаловать в систему уведомлений и мониторинга RxMartianBot!
+fun Bot.playStartAnimation(chatId: Long) {
+    val dotDelay = 750L;
+    val uncertainConnectionDelay = 2500L;
+    val fastDataFetchInitDelay = 500L;
+    val finalMessageDelay = 1750L;
+
+    var animation = "Connecting to RxCorporation database"
+
+    val init = sendMessage(chatId = chatId, text = "```\n$animation\n```", parseMode = MARKDOWN)
+    val msgId = init.first!!.body()!!.result!!.messageId;
+
+
+    for (i in 0..2) {
+        animation += "."
+        editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, dotDelay);
+    }
+
+    animation += "\nMartian database connection established."
+    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, uncertainConnectionDelay);
+
+    animation += "\nReading user profile data"
+    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, fastDataFetchInitDelay);
+
+    for (i in 0..2) {
+        animation += "."
+        editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, dotDelay);
+    }
+
+    animation = """
+        Подключаемся к базе данных RxCorporation...
+        Подключение к марсианской базе данных установлено.
+        Считываем профиль пользователя...
+        
+        Добро пожаловать в систему уведомлений и мониторинга RxMartianBot!
+    """.trimIndent()
+
+    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, finalMessageDelay);
+}
+
+fun Bot.editAfterDelay(chatId: Long, messageId: Long, newMessage: String, parseMode: ParseMode, delay: Long) {
+    if (delay > 0) Thread.sleep(delay)
+
+    editMessageText(chatId = chatId, messageId = messageId, text = newMessage, parseMode = parseMode)
+}
+
+fun Bot.sendRepeatingStart(chatId: Long) = sendMessage(chatId = chatId, text = """
+    Вы уже зарегистрированы в системе. Используйте /help, если вы заблудились.
+
+    Если вам понравилась заставка, и вы хотите увидеть её ещё раз – увы, она крайне нестабильная. Да и вообще, до Марса путь неблизкий, не надо к нему лишний раз подключаться. :)
 """.trimIndent())
 
 fun Bot.sendAbout(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
@@ -256,6 +316,7 @@ fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDO
     Список доступных команд:
      • /about – общая информация о приложении
      • /help – показывает это сообщение
+     • /exit – выход из системы
      ► /status – показывает статус теплицы [демо-версия ограничена одной теплицей]
      ► /status `id датчика` – показывает статус датчика
      ► /add `id датчика` – регистрирует датчик в системе 
@@ -263,6 +324,15 @@ fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDO
     Команды, помеченные "►" так же доступны в виде кнопок. Это удобнее для людей.
 
     Более полную информацию вы можете получить в марсианском отделе моральной поддержки RxCorporation. 
+""".trimIndent())
+
+fun Bot.sendExit(chatId: Long) = sendMessage(chatId = chatId, text = """
+    Вы вышли из системы.
+
+    Уведомления отключены.
+    
+    История сообщений не удаляется, вы можете переслать важную информацию коллегам.
+    Удалите историю вручную, если в ней были конфиденциальные данные! 
 """.trimIndent())
 
 fun generateUsersButton(): List<List<KeyboardButton>> {
