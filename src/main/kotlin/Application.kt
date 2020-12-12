@@ -34,7 +34,7 @@ fun main(args: Array<String>) {
 
     val server = embeddedServer(Netty, port = 80) {
         routing {
-            get("/") {
+            post("/") {
                 val receivedBody = call.receiveText()
                 bot.processUpdate(receivedBody)
             }
