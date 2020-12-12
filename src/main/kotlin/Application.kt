@@ -107,7 +107,20 @@ fun describeBot() = bot {
                 return@command
             }
 
-            bot.sendMessage(chatId = chatId, parseMode = MARKDOWN, text = "`TODO: Добавляет датчик или ругается`")
+            if (sensorPresent(joinedArgs)) {
+                bot.sendMessage(chatId = chatId, text = "Этот датчик уже зарегистрирован. Вот его показания:")
+                bot.sendSensor(chatId, getSensor(joinedArgs)!!)
+                return@command
+            }
+
+            val sensor = createSensor(joinedArgs)
+            if (sensor == null ) {
+                bot.sendMessage(chatId = chatId, text = "Датчик с таким идентификатором не найден. Если вы считаете, что ввели его номер корректно и он – не галлюцинация, обратитесь в службу поддержки для замены датчика")
+                return@command
+            }
+
+            bot.sendMessage(chatId = chatId, text = "Добавлен новый датчик:")
+            bot.sendSensor(chatId, sensor)
         }
 
         command("markdownV2") {
@@ -333,6 +346,16 @@ fun Bot.sendExit(chatId: Long) = sendMessage(chatId = chatId, text = """
     
     История сообщений не удаляется, вы можете переслать важную информацию коллегам.
     Удалите историю вручную, если в ней были конфиденциальные данные! 
+""".trimIndent())
+
+fun Bot.sendSensor(chatId: Long, sensor: FakeSensor) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
+    `Т${sensor.plantId}${sensor.sensorType.type[0]}${sensor.sensorId}`
+    Теплица: `${sensor.plantId}`
+    Датчик: `${sensor.plantId}`
+    Тип: `${sensor.sensorType.type}`
+    Нижняя граница: `${sensor.lowBoundary()} ${sensor.sensorType.unit}`
+    Верхняя граница: `${sensor.highBoundary()} ${sensor.sensorType.unit}`
+    Текущее значение: `${sensor.current()} ${sensor.sensorType.unit} (норма)`
 """.trimIndent())
 
 fun generateUsersButton(): List<List<KeyboardButton>> {
