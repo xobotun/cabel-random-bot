@@ -6,6 +6,7 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.*
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
+import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN_V2
 import com.github.kotlintelegrambot.entities.ReplyKeyboardRemove
 import com.github.kotlintelegrambot.entities.TelegramFile.ByUrl
@@ -78,7 +79,7 @@ fun describeBot() = bot {
 
             val joinedArgs = args.joinToString()
             val response = if (joinedArgs.isNotBlank()) "`TODO: Показывает статус датчика`" else "`TODO: Показывает статус теплицы в целом`"
-            bot.sendMessage(chatId = chatId, text = response)
+            bot.sendMessage(chatId = chatId, parseMode = MARKDOWN, text = response)
         }
 
         command("add") {
@@ -90,7 +91,7 @@ fun describeBot() = bot {
                 return@command
             }
 
-            bot.sendMessage(chatId = chatId, text = "`TODO: Добавляет датчик или ругается`")
+            bot.sendMessage(chatId = chatId, parseMode = MARKDOWN, text = "`TODO: Добавляет датчик или ругается`")
         }
 
         command("markdownV2") {
@@ -108,6 +109,7 @@ fun describeBot() = bot {
                         println("Hello Kotlin!")
                     }
                     ```
+                    test-test-test
                 """.trimIndent()
             bot.sendMessage(
                     chatId = message.chat.id,
@@ -236,7 +238,7 @@ fun Bot.sendStart(chatId: Long) = sendMessage(chatId = chatId, text = """
     Добро пожаловать в систему уведомлений и мониторинга RxMartianBot!
 """.trimIndent())
 
-fun Bot.sendAbout(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN_V2, text = """
+fun Bot.sendAbout(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
     Система уведомлений и мониторинга позволяет:
      • быстро получать уведомления и отчёты на личный коммуникатор колониста (настраивается в личном кабинете в приложении),
      • запрашивать статус датчиков в теплице и пересылать их другим, оставаясь в экосистеме чата.
@@ -244,11 +246,13 @@ fun Bot.sendAbout(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKD
 
     Это демо-версия приложения. Стоимость полной версии вы можете запросить в марсианском отделе инфоагромаркетинга RxCorporation.
     
-    ```>> RxMartianBot v0.3.14 <<
-    >> $chatId <<```
+    ```
+    >> RxMartianBot v0.3.14 <<
+    >> $chatId <<
+    ```
 """.trimIndent())
 
-fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN_V2, text = """
+fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
     Список доступных команд:
      • /about – общая информация о приложении
      • /help – показывает это сообщение
