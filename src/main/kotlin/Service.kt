@@ -6,17 +6,27 @@ import kotlin.collections.HashMap
 import kotlin.collections.HashSet
 
 // ChatId to whatever
-val users: MutableMap<Long, Any?> = HashMap()
+val users: MutableMap<Long, MutableMap<String, Any?>?> = HashMap()
 // PlantId to sensor
 val plantSensors: MutableMap<Long, MutableMap<SensorType, MutableSet<FakeSensor>>> = HashMap()
 // Code to sensor
 val sensors: MutableMap<String, FakeSensor> = HashMap()
+
 
 fun userPresent(chatId: Long) = users.containsKey(chatId)
 
 fun registerUser(chatId: Long) { users[chatId] = null }
 
 fun deleteUser(chatId: Long) { users.remove(chatId) }
+
+fun setLatestMessage(chatId: Long, messageId: Long) { users.computeIfAbsent(chatId) { HashMap() }!!["latest_msg"] = messageId }
+
+fun getLatestMessage(chatId: Long) = users[chatId]?.get("latest_msg") as Long?
+
+fun setLatestSensorMessage(chatId: Long, messageId: Long?) { users.computeIfAbsent(chatId) { HashMap() }!!["latest_sensor_msg"] = messageId }
+
+fun getLatestSensorMessage(chatId: Long) = users[chatId]?.get("latest_sensor_msg") as Long?
+
 
 fun sensorPresent(code: String) = sensors.containsKey(code)
 

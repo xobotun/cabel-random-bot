@@ -151,6 +151,11 @@ fun describeBot() = bot {
             bot.sendSensor(chatId, sensor)
         }
 
+        callbackQuery("add") {
+            val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
+            bot.sendMessage(chatId = chatId, parseMode = MARKDOWN, text = "Регистрация датчиков в текущей версии осуществляется по команде `/add Т<идентификатор теплицы><тип датчика><идентификатор датчика>`. Литеры датчиков: `ДТВУКСОМ`. В следующей версии под это будет отдельный интерфейс.")
+        }
+
         callbackQuery("t_status") {
             val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
             bot.processPlant(chatId, 1L)
@@ -178,11 +183,21 @@ fun describeBot() = bot {
                 val sensor = getSensor("s_status (.*)".toRegex().matchEntire(callbackQuery.data)!!.groups[1]!!.value)
                 if (sensor == null) {
                     bot.sendMessage(chatId = chatId, text = "Датчик с таким идентификатором не найден")
+                    setLatestSensorMessage(chatId, null)
                     return@callbackQuery
                 } else {
-                    bot.sendSensor(chatId, sensor)
+                    if (getLatestSensorMessage(chatId) != null && getLatestMessage(chatId) == getLatestSensorMessage(chatId)) bot.deleteMessage(chatId, getLatestSensorMessage(chatId)!!)
+
+                    val result = bot.sendSensor(chatId, sensor)
+                    setLatestSensorMessage(chatId, result.first!!.body()!!.result!!.messageId)
+                    setLatestMessage(chatId, result.first!!.body()!!.result!!.messageId)
                 }
             }
+        }
+
+        text {
+            val chatId = update.message!!.chat.id;
+            setLatestMessage(chatId, update.message!!.messageId)
         }
 
         telegramError {
@@ -287,7 +302,7 @@ fun Bot.sendExit(chatId: Long) = sendMessage(chatId = chatId, text = """
 fun Bot.sendSensor(chatId: Long, sensor: FakeSensor) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
     `Т${sensor.plantId}${sensor.sensorType.type[0]}${sensor.sensorId}`
     Теплица: `${sensor.plantId}`
-    Датчик: `${sensor.plantId}`
+    Датчик: `${sensor.sensorId}`
     Тип: `${sensor.sensorType.type}`
     Нижняя граница: `${sensor.lowBoundary().format(2)} ${sensor.sensorType.unit}`
     Верхняя граница: `${sensor.highBoundary().format(2)} ${sensor.sensorType.unit}`
