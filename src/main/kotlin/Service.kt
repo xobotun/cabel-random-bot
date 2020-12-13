@@ -13,9 +13,9 @@ val plantSensors: MutableMap<Long, MutableMap<SensorType, MutableSet<FakeSensor>
 val sensors: MutableMap<String, FakeSensor> = HashMap()
 
 
-fun userPresent(chatId: Long) = users.containsKey(chatId)
+fun userPresent(chatId: Long) = users.computeIfAbsent(chatId) { HashMap() }!!.containsKey("registered")
 
-fun registerUser(chatId: Long) { users[chatId] = null }
+fun registerUser(chatId: Long) { users.computeIfAbsent(chatId) { HashMap() }!!["registered"] = true }
 
 fun deleteUser(chatId: Long) { users.remove(chatId) }
 
