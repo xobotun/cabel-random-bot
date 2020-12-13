@@ -32,6 +32,7 @@ import java.util.*
 import java.util.Collections.sort
 import java.util.concurrent.ThreadLocalRandom
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 
 fun main(args: Array<String>) {
 
@@ -54,8 +55,12 @@ fun main(args: Array<String>) {
 }
 
 fun initGrowPlant() {
+    val max = 3;
+    val skipChance = 0.15;
+
     listOf("Д", "Т", "В", "У", "К", "С", "М").forEach {
-        for (i in 1..ThreadLocalRandom.current().nextInt(2, 6)) createSensor("Т1$it$i")
+//        if (it != "М" && ThreadLocalRandom.current().nextDouble() < skipChance) return@forEach
+        for (i in 1..ThreadLocalRandom.current().nextInt(1, max + 1)) createSensor("Т1$it$i")
     }
 }
 
@@ -109,27 +114,7 @@ fun describeBot() = bot {
             val joinedArgs = args.joinToString()
             if (joinedArgs.isBlank()) {
                 val plantId = 1L
-                val sensors = getSensors(1)
-                if (sensors == null || sensors.isEmpty()) {
-                    bot.sendMessage(chatId = chatId, text = "В теплице $plantId не установлены датчики! Возможно, последствия вчерашней пылевой бури и потери электроснабжения. Необходима ручная перерегистрация")
-                    return@command
-                }
-
-                val messages = Arrays.stream(SensorType.values())
-                    .map { sensors[it] }
-                    .filter(Objects::nonNull)
-                    .map { it!!.toMutableList() }
-                    .peek { it.sortBy { it.code } }
-                    .map {
-                        """
-                            Тип: ${it[0].sensorType.type}
-                            Датчики: ${it.joinToString(", ") { "`${it.code}`" }}
-                            Среднее значение: `${it.map { it.current() }.average().format(2)}` ${it[0].sensorType.unit}
-                        """.trimIndent()
-                    }
-                    .collect(Collectors.toList())
-
-                bot.sendPlant(chatId, plantId, messages)
+                bot.processPlant(chatId, plantId)
             } else {
                 val sensor = getSensor(joinedArgs)
                 if (sensor == null) {
@@ -166,135 +151,38 @@ fun describeBot() = bot {
             bot.sendSensor(chatId, sensor)
         }
 
-        command("markdownV2") {
-            val markdownV2Text = """
-                    *bold \*text*
-                    _italic \*text_
-                    __underline__
-                    ~strikethrough~
-                    *bold _italic bold ~italic bold strikethrough~ __underline italic bold___ bold*
-                    [inline URL](http://www.example.com/)
-                    [inline mention of a user](tg://user?id=123456789)
-                    `inline fixed-width code`
-                    ```kotlin
-                    fun main() {
-                        println("Hello Kotlin!")
-                    }
-                    ```
-                    test-test-test
-                """.trimIndent()
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = markdownV2Text,
-                    parseMode = MARKDOWN_V2
-            )
-        }
-
-        command("inlineButtons") {
-            val inlineKeyboardMarkup = InlineKeyboardMarkup.create(
-                    listOf(InlineKeyboardButton.CallbackData(text = "Test Inline Button", callbackData = "testButton")),
-                    listOf(InlineKeyboardButton.CallbackData(text = "Show alert", callbackData = "showAlert"))
-            )
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = "Hello, inline buttons!",
-                    replyMarkup = inlineKeyboardMarkup
-            )
-        }
-
-        command("userButtons") {
-            val keyboardMarkup = KeyboardReplyMarkup(keyboard = generateUsersButton(), resizeKeyboard = true)
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = "Hello, users buttons!",
-                    replyMarkup = keyboardMarkup
-            )
-        }
-
-        command("mediaGroup") {
-            bot.sendMediaGroup(
-                    chatId = message.chat.id,
-                    mediaGroup = MediaGroup.from(
-                            InputMediaPhoto(
-                                    media = ByUrl("https://www.sngular.com/wp-content/uploads/2019/11/Kotlin-Blog-1400x411.png"),
-                                    caption = "I come from an url :P"
-                            ),
-                            InputMediaPhoto(
-                                    media = ByUrl("https://www.sngular.com/wp-content/uploads/2019/11/Kotlin-Blog-1400x411.png"),
-                                    caption = "Me too!"
-                            )
-                    ),
-                    replyToMessageId = message.messageId
-            )
-        }
-
-        callbackQuery("testButton") {
+        callbackQuery("t_status") {
             val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
-            bot.sendMessage(chatId, callbackQuery.data)
+            bot.processPlant(chatId, 1L)
+        }
+
+        // Does not trigger. :/
+        callbackQuery("s_status") {
+            val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
+            bot.sendMessage(chatId, callbackQuery.toString())
         }
 
         callbackQuery(
                 callbackData = "showAlert",
-                callbackAnswerText = "HelloText",
+                callbackAnswerText = "Для покупки полной версии обратитесь в марсианской отдел инфоагромаркетинга RxCorporation. Функциональность платежей в демо-версии приложения отключена",
                 callbackAnswerShowAlert = true
         ) {
             val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
-            bot.sendMessage(chatId, callbackQuery.data)
+            // Do nothing, alert is shown on the client
         }
 
-        text("ping") {
-            bot.sendMessage(chatId = message.chat.id, text = "Pong")
-        }
+        callbackQuery {
+            val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
 
-        location {
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = "Your location is (${location.latitude}, ${location.longitude})",
-                    replyMarkup = ReplyKeyboardRemove()
-            )
-        }
-
-        contact {
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = "Hello, ${contact.firstName} ${contact.lastName}",
-                    replyMarkup = ReplyKeyboardRemove()
-            )
-        }
-
-        channel {
-            // Handle channel update
-        }
-
-        inlineQuery {
-            val queryText = inlineQuery.query
-
-            if (queryText.isBlank() or queryText.isEmpty()) return@inlineQuery
-
-            val inlineResults = (0 until 5).map {
-                InlineQueryResult.Article(
-                        id = it.toString(),
-                        title = "$it. $queryText",
-                        inputMessageContent = InputMessageContent.Text("$it. $queryText"),
-                        description = "Add $it. before you word"
-                )
+            if (callbackQuery.data.startsWith("s_status")) {
+                val sensor = getSensor("s_status (.*)".toRegex().matchEntire(callbackQuery.data)!!.groups[1]!!.value)
+                if (sensor == null) {
+                    bot.sendMessage(chatId = chatId, text = "Датчик с таким идентификатором не найден")
+                    return@callbackQuery
+                } else {
+                    bot.sendSensor(chatId, sensor)
+                }
             }
-            bot.answerInlineQuery(inlineQuery.id, inlineResults)
-        }
-
-        photos {
-            bot.sendMessage(
-                    chatId = message.chat.id,
-                    text = "Wowww, awesome photos!!! :P"
-            )
-        }
-
-        command("diceAsDartboard") {
-            bot.sendDice(message.chat.id, DiceEmoji.Dartboard)
-        }
-
-        dice {
-            bot.sendMessage(message.chat.id, "A dice ${dice.emoji.emojiValue} with value ${dice.value} has been received!")
         }
 
         telegramError {
@@ -380,7 +268,12 @@ fun Bot.sendHelp(chatId: Long) = sendMessage(chatId = chatId, parseMode = MARKDO
     Команды, помеченные "►" так же доступны в виде кнопок. Это удобнее для людей.
 
     Более полную информацию вы можете получить в марсианском отделе моральной поддержки RxCorporation. 
-""".trimIndent())
+""".trimIndent(),
+    replyMarkup = InlineKeyboardMarkup.create(
+        listOf(InlineKeyboardButton.CallbackData(text = "Статус теплицы", callbackData = "t_status")),
+        listOf(InlineKeyboardButton.CallbackData(text = "Добавить датчик", callbackData = "add"), InlineKeyboardButton.CallbackData(text = "Купить приложение", callbackData = "showAlert"))
+    )
+)
 
 fun Bot.sendExit(chatId: Long) = sendMessage(chatId = chatId, text = """
     Вы вышли из системы.
@@ -401,18 +294,42 @@ fun Bot.sendSensor(chatId: Long, sensor: FakeSensor) = sendMessage(chatId = chat
     Текущее значение: `${sensor.current().format(2)} ${sensor.sensorType.unit} (норма)`
 """.trimIndent())
 
-fun Bot.sendPlant(chatId: Long, plantId: Long, messages: List<String>) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
+fun Bot.processPlant(chatId: Long, plantId: Long) {
+    val sensors = getSensors(1)
+    if (sensors == null || sensors.isEmpty()) {
+        sendMessage(chatId = chatId, text = "В теплице $plantId не установлены датчики! Возможно, последствия вчерашней пылевой бури и потери электроснабжения. Необходима ручная перерегистрация")
+        return
+    }
+
+    val messages = ArrayList<String>()
+    val sensorButtons = ArrayList<List<InlineKeyboardButton>>()
+
+    Arrays.stream(SensorType.values())
+        .map { sensors[it] }
+        .filter(Objects::nonNull)
+        .map { it!!.toMutableList() }
+        .peek { it.sortBy { it.code } }
+        .forEach {
+            messages.add(
+            """
+                Тип: ${it[0].sensorType.type}
+                Датчики: ${it.joinToString(", ") { "`${it.code}`" }}
+                Среднее значение: `${it.map { it.current() }.average().format(2)}` ${it[0].sensorType.unit}
+            """.trimIndent()
+            )
+
+            sensorButtons.add(it.map { InlineKeyboardButton.CallbackData(text = it.code, callbackData = "s_status ${it.code}") })
+        }
+
+    sendPlant(chatId, plantId, messages, sensorButtons)
+}
+
+fun Bot.sendPlant(chatId: Long, plantId: Long, messages: List<String>, buttons: List<List<InlineKeyboardButton>>) = sendMessage(chatId = chatId, parseMode = MARKDOWN, text = """
     Теплица: `$plantId`
     
 ${messages.joinToString("\n\n") { it }}
-""".trimIndent())
-
-fun generateUsersButton(): List<List<KeyboardButton>> {
-    return listOf(
-            listOf(KeyboardButton("Request location (not supported on desktop)", requestLocation = true)),
-            listOf(KeyboardButton("Request contact", requestContact = true))
-    )
-}
+""".trimIndent(),
+replyMarkup = InlineKeyboardMarkup.create(buttons))
 
 
 fun Double.format(fracDigits: Int): String {
