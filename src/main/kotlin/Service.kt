@@ -1,29 +1,30 @@
 package com.xobotun.rxproject.martianagrobot
 
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
 
 // ChatId to whatever
-val users: MutableMap<Long, MutableMap<String, Any?>?> = HashMap()
+val users: MutableMap<Long, MutableMap<String, Any?>?> = ConcurrentHashMap()
 // PlantId to sensor
-val plantSensors: MutableMap<Long, MutableMap<SensorType, MutableSet<FakeSensor>>> = HashMap()
+val plantSensors: MutableMap<Long, MutableMap<SensorType, MutableSet<FakeSensor>>> = ConcurrentHashMap()
 // Code to sensor
-val sensors: MutableMap<String, FakeSensor> = HashMap()
+val sensors: MutableMap<String, FakeSensor> = ConcurrentHashMap()
 
 
-fun userPresent(chatId: Long) = users.computeIfAbsent(chatId) { HashMap() }!!.containsKey("registered")
+fun userPresent(chatId: Long) = users.computeIfAbsent(chatId) { ConcurrentHashMap() }!!.containsKey("registered")
 
-fun registerUser(chatId: Long) { users.computeIfAbsent(chatId) { HashMap() }!!["registered"] = true }
+fun registerUser(chatId: Long) { users.computeIfAbsent(chatId) { ConcurrentHashMap() }!!["registered"] = true }
 
 fun deleteUser(chatId: Long) { users.remove(chatId) }
 
-fun setLatestMessage(chatId: Long, messageId: Long) { users.computeIfAbsent(chatId) { HashMap() }!!["latest_msg"] = messageId }
+fun setLatestMessage(chatId: Long, messageId: Long) { users.computeIfAbsent(chatId) { ConcurrentHashMap() }!!["latest_msg"] = messageId }
 
 fun getLatestMessage(chatId: Long) = users[chatId]?.get("latest_msg") as Long?
 
-fun setLatestSensorMessage(chatId: Long, messageId: Long?) { users.computeIfAbsent(chatId) { HashMap() }!!["latest_sensor_msg"] = messageId }
+fun setLatestSensorMessage(chatId: Long, messageId: Long?) { users.computeIfAbsent(chatId) { ConcurrentHashMap() }!!["latest_sensor_msg"] = messageId }
 
 fun getLatestSensorMessage(chatId: Long) = users[chatId]?.get("latest_sensor_msg") as Long?
 
