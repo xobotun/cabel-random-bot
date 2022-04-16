@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build . -t martian-agro-bot:latest
+docker build . -t cabel-random-bot:latest

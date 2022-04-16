@@ -1,7 +1,7 @@
 FROM openjdk:11.0.6-jdk
 MAINTAINER xobotun
 
-COPY ./rx_martian_agrobot.jar .
+COPY ./cabel-random-bot.jar .
 
 EXPOSE 80
-ENTRYPOINT ["java", "-jar", "rx_martian_agrobot.jar"]
+ENTRYPOINT ["java", "-jar", "cabel-random-bot.jar"]

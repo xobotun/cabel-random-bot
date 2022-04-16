@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  carbot:
-    image: martian-agro-bot:latest
+  randombot:
+    image: cabel-random-bot:latest
     restart: always
     networks:
       nginx-network:
         aliases:
-          - nginx-rx-martian-agro-bot.xobotun.com-container
+          - nginx-cabel-random-bot.xobotun.com-container
 
 networks:
   nginx-network:
