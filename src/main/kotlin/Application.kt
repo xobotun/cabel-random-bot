@@ -11,6 +11,7 @@ import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.github.badoualy.telegram.api.Kotlogram
 import com.github.badoualy.telegram.api.TelegramApp
+import com.github.badoualy.telegram.tl.api.auth.TLSentCode
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
@@ -18,6 +19,9 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+
+val client = Kotlogram.getDefaultClient(config, InMemoryApiStorage())
+var codeHash: TLSentCode? = null
 
 fun main(args: Array<String>) {
 
@@ -48,13 +52,27 @@ fun describeBot() = bot {
     dispatch {
         command("start") {
             val chatId = update.message!!.chat.id;
-            val client = Kotlogram.getDefaultClient(config, InMemoryApiStorage())
 
             val fullChatInfo = client.messagesGetFullChat(chatId.toInt())
             val message = "Users: " + fullChatInfo.users.map { it.id }.joinToString()
 
             bot.sendMessage(chatId, message)
 //            bot.playStartAnimation(chatId)
+        }
+
+        command("reg") {
+            client.authSendCode(false, phoneNumber, true)
+        }
+
+        command("reg-code") {
+            client.authSignIn(phoneNumber, codeHash!!.phoneCodeHash, message.text!!.removePrefix("/reg-code "))
+        }
+
+        command("reg-pass") {
+            val authorization = client.authCheckPassword(message.text!!.removePrefix("/reg-pass "))
+            authorization.user.asUser.apply {
+                println("You are now signed in as $firstName $lastName @$username")
+            }
         }
 
         telegramError {

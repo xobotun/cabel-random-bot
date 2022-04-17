@@ -28,7 +28,7 @@ class InMemoryApiStorage : TelegramApiStorage {
 
     override fun loadSession(): MTSession? = session
     override fun saveSession(session: MTSession?) {
-        this.session = session!!
+        this.session = session
     }
 
 
