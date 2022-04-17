@@ -65,12 +65,15 @@ fun describeBot() = bot {
             client.authSendCode(false, phoneNumber, true)
         }
 
-        command("reg-code") {
-            client.authSignIn(phoneNumber, codeHash!!.phoneCodeHash, message.text!!.removePrefix("/reg-code "))
+        command("reg_code") {
+            val authorization = client.authSignIn(phoneNumber, codeHash!!.phoneCodeHash, message.text!!.removePrefix("/reg_code "))
+            authorization.user.asUser.apply {
+                println("You are now signed in as $firstName $lastName @$username")
+            }
         }
 
-        command("reg-pass") {
-            val authorization = client.authCheckPassword(message.text!!.removePrefix("/reg-pass "))
+        command("reg_pass") {
+            val authorization = client.authCheckPassword(message.text!!.removePrefix("/reg_pass "))
             authorization.user.asUser.apply {
                 println("You are now signed in as $firstName $lastName @$username")
             }
