@@ -43,6 +43,7 @@ fun main(args: Array<String>) {
 
 fun describeBot() = bot {
 
+    token = botToken
     timeout = 30
     logLevel = LogLevel.Network.Body
     webhook {

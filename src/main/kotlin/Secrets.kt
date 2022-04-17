@@ -2,7 +2,7 @@ package com.xobotun.tinkoff.cabel
 
 import com.github.badoualy.telegram.api.TelegramApp
 
-const val token = "secret"
+const val botToken = "secret"
 val config = TelegramApp(
     apiId = 0,
     apiHash = "",
