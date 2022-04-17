@@ -9,6 +9,8 @@ import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
+import com.github.badoualy.telegram.api.Kotlogram
+import com.github.badoualy.telegram.api.TelegramApp
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
@@ -37,7 +39,6 @@ fun main(args: Array<String>) {
 
 fun describeBot() = bot {
 
-    token = "secret"
     timeout = 30
     logLevel = LogLevel.Network.Body
     webhook {
@@ -47,8 +48,13 @@ fun describeBot() = bot {
     dispatch {
         command("start") {
             val chatId = update.message!!.chat.id;
+            val client = Kotlogram.getDefaultClient(config, InMemoryApiStorage())
 
-            bot.playStartAnimation(chatId)
+            val fullChatInfo = client.messagesGetFullChat(chatId.toInt())
+            val message = "Users: " + fullChatInfo.users.map { it.id }.joinToString()
+
+            bot.sendMessage(chatId, message)
+//            bot.playStartAnimation(chatId)
         }
 
         telegramError {

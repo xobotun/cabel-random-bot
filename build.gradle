@@ -22,6 +22,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.20"
 
     compile 'io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.0.1'
+    compile 'com.github.badoualy:kotlogram:1.0.0-RC3'
+
     compile "com.squareup.retrofit2:retrofit:2.3.0"
     compile "com.squareup.retrofit2:converter-gson:2.3.0"
     compile "com.squareup.okhttp3:logging-interceptor:4.6.0"
