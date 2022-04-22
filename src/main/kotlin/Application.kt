@@ -20,9 +20,6 @@ import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
-val client = Kotlogram.getDefaultClient(config, InMemoryApiStorage())
-var codeHash: TLSentCode? = null
-
 fun main(args: Array<String>) {
 
     val bot = describeBot()
@@ -54,34 +51,7 @@ fun describeBot() = bot {
         command("start") {
             val chatId = update.message!!.chat.id;
 
-            val fullChatInfo = client.messagesGetFullChat(chatId.toInt())
-            val message = "Users: " + fullChatInfo.users.map { it.id }.joinToString()
-
-            bot.sendMessage(chatId, message)
-//            bot.playStartAnimation(chatId)
-        }
-
-        command("reg") {
-            client.authSendCode(false, phoneNumber, true)
-        }
-
-        command("test") {
-            println("$args")
-            bot.sendMessage(update.message!!.chat.id, args.joinToString())
-        }
-
-        command("reg_code") {
-            val authorization = client.authSignIn(phoneNumber, codeHash!!.phoneCodeHash, args.joinToString())
-            authorization.user.asUser.apply {
-                println("You are now signed in as $firstName $lastName @$username")
-            }
-        }
-
-        command("reg_pass") {
-            val authorization = client.authCheckPassword(args.joinToString())
-            authorization.user.asUser.apply {
-                println("You are now signed in as $firstName $lastName @$username")
-            }
+            bot.playStartAnimation(chatId)
         }
 
         telegramError {
