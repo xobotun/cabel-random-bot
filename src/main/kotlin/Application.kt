@@ -5,13 +5,10 @@ import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.telegramError
-import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.ParseMode.MARKDOWN
+import com.github.kotlintelegrambot.entities.polls.PollType
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
-import com.github.badoualy.telegram.api.Kotlogram
-import com.github.badoualy.telegram.api.TelegramApp
-import com.github.badoualy.telegram.tl.api.auth.TLSentCode
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
@@ -51,56 +48,33 @@ fun describeBot() = bot {
         command("start") {
             val chatId = update.message!!.chat.id;
 
+            println("Message received: $update")
             bot.playStartAnimation(chatId)
         }
 
         telegramError {
-            println(error.getErrorMessage())
+            println("Error: " + error.getErrorMessage())
+            println("Full error: $error")
         }
     }
 }
 
 fun Bot.playStartAnimation(chatId: Long) {
-    val dotDelay = 750L;
-    val uncertainConnectionDelay = 2500L;
-    val fastDataFetchInitDelay = 500L;
-    val finalMessageDelay = 1750L;
+    println("Creating DrumRoll")
+    val drumRoll = DrumRoll()
 
-    var animation = "Connecting to RxCorporation database"
+    println("Sendining initial message")
+    val init = sendMessage(chatId = chatId, text = "```\n${drumRoll.render()}\n```", parseMode = MARKDOWN, disableNotification = true)
+    val msgId = init.first!!.body()!!.result!!.messageId
+    println("Sent message #$msgId")
 
-    val init = sendMessage(chatId = chatId, text = "```\n$animation\n```", parseMode = MARKDOWN)
-    val msgId = init.first!!.body()!!.result!!.messageId;
-
-
-    for (i in 0..2) {
-        animation += "."
-        editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, dotDelay);
+    while (drumRoll.advanceFrame()) {
+        Thread.sleep(sleepMilliTime)
+        println("Editing message #$msgId with frame #${drumRoll.currentFrame}")
+        editMessageText(chatId = chatId, messageId = msgId, text = "```\n${drumRoll.render()}\n```", parseMode = MARKDOWN)
     }
 
-    animation += "\nMartian database connection established."
-    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, uncertainConnectionDelay);
-
-    animation += "\nReading user profile data"
-    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, fastDataFetchInitDelay);
-
-    for (i in 0..2) {
-        animation += "."
-        editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, dotDelay);
-    }
-
-    animation = """
-        Подключаемся к базе данных RxCorporation...
-        Подключение к марсианской базе данных установлено.
-        Считываем профиль пользователя...
-        
-        Добро пожаловать в систему уведомлений и мониторинга RxMartianBot!
-    """.trimIndent()
-
-    editAfterDelay(chatId, msgId, "```\n$animation\n```", MARKDOWN, finalMessageDelay);
+    println("Sending ulitimative poll")
+    sendPoll(chatId, "Роли определены", listOf("Радоваться", "Грустить"), type = PollType.QUIZ, correctOptionId = 0, disableNotification = false)
 }
 
-fun Bot.editAfterDelay(chatId: Long, messageId: Long, newMessage: String, parseMode: ParseMode, delay: Long) {
-    if (delay > 0) Thread.sleep(delay)
-
-    editMessageText(chatId = chatId, messageId = messageId, text = newMessage, parseMode = parseMode)
-}
